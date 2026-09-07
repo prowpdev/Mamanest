@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Sparkles, Heart } from 'lucide-react';
+import { ChevronLeft, Sparkles, Heart, Shield } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { BabyAvatar } from './BabyAvatar';
 
@@ -26,7 +26,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   rightAction,
 }) => {
   const navigate = useNavigate();
-  const { activeBaby, openMamaAI, openCheckIn, todayCheckIn } = useApp();
+  const { activeBaby, openMamaAI, openCheckIn, todayCheckIn, isAdmin } = useApp();
 
   const handleBack = () => {
     if (onBack) {
@@ -78,8 +78,20 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         </div>
 
         {/* Right action group */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {rightAction}
+
+          {isAdmin && (
+            <button
+              id="header-admin-quick-btn"
+              onClick={() => navigate('/admin')}
+              className="p-2 rounded-full border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors cursor-pointer"
+              title="Admin Console"
+              aria-label="Admin Console"
+            >
+              <Shield className="w-4 h-4" />
+            </button>
+          )}
 
           {showWellbeingButton && (
             <button

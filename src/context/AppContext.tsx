@@ -12,6 +12,10 @@ import {
   UnifiedActivity,
   Reminder,
   MomCheckIn,
+  Milestone,
+  Vaccination,
+  VaccinationStatus,
+  HealthcareVisit,
 } from '../types';
 import { authService } from '../services/authService';
 import { babyService } from '../services/babyService';
@@ -19,6 +23,9 @@ import { trackingService } from '../services/trackingService';
 import { reminderService } from '../services/reminderService';
 import { wellbeingService } from '../services/wellbeingService';
 import { storageService } from '../services/storageService';
+import { growthService } from '../services/growthService';
+import { vaccinationService } from '../services/vaccinationService';
+import { visitService } from '../services/visitService';
 
 interface ToastState {
   id: string;
@@ -47,6 +54,18 @@ interface AppContextType {
   todayCheckIn?: MomCheckIn;
   toast: ToastState | null;
   syncPendingCount: number;
+
+  // Admin & User Management
+  isAdmin: boolean;
+  users: User[];
+  refreshUsers: () => void;
+  createUser: (userData: Omit<User, 'id' | 'createdAt'>) => User;
+  updateUser: (id: string, updates: Partial<User>) => void;
+  deleteUser: (id: string) => void;
+  toggleUserStatus: (id: string) => void;
+  resetUserPassword: (id: string) => { success: boolean; message: string; tempPass: string };
+  switchActiveUser: (user: User) => void;
+  completeSetupWizard: () => void;
 
   // Modals & Sheets state
   isLoggerOpen: boolean;
@@ -85,6 +104,26 @@ interface AppContextType {
   toggleReminder: (id: string) => void;
   deleteReminder: (id: string) => void;
 
+  // Milestones
+  milestones: Milestone[];
+  addMilestone: (data: Omit<Milestone, 'id'>) => Milestone;
+  updateMilestone: (id: string, updates: Partial<Milestone>) => Milestone | null;
+  deleteMilestone: (id: string) => void;
+  toggleMilestone: (id: string) => void;
+
+  // Vaccinations
+  vaccinations: Vaccination[];
+  addVaccination: (data: Omit<Vaccination, 'id'>) => Vaccination;
+  updateVaccination: (id: string, updates: Partial<Vaccination>) => Vaccination | null;
+  updateVaccinationStatus: (id: string, status: VaccinationStatus, administeredDate?: string) => void;
+  deleteVaccination: (id: string) => void;
+
+  // Healthcare Visits
+  visits: HealthcareVisit[];
+  addVisit: (data: Omit<HealthcareVisit, 'id'>) => HealthcareVisit;
+  updateVisit: (id: string, updates: Partial<HealthcareVisit>) => HealthcareVisit | null;
+  deleteVisit: (id: string) => void;
+
   // Mom check-in
   saveMomCheckIn: (data: Omit<MomCheckIn, 'id' | 'timestamp'>) => void;
 
@@ -113,8 +152,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     medicineCount: 0,
   });
   const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [milestones, setMilestones] = useState<Milestone[]>(() => growthService.getMilestones(babyService.getActiveBaby()?.id));
+  const [vaccinations, setVaccinations] = useState<Vaccination[]>(() => vaccinationService.getVaccinations(babyService.getActiveBaby()?.id));
+  const [visits, setVisits] = useState<HealthcareVisit[]>(() => visitService.getVisits(babyService.getActiveBaby()?.id));
   const [todayCheckIn, setTodayCheckIn] = useState<MomCheckIn | undefined>(undefined);
   const [syncPendingCount, setSyncPendingCount] = useState<number>(() => storageService.getPendingSyncCount());
+  const [users, setUsers] = useState<User[]>(() => authService.getUsers());
+
+  const isAdmin = authState.user?.role === 'admin';
+
+  const refreshUsers = useCallback(() => {
+    setUsers(authService.getUsers());
+  }, []);
 
   // Sheets state
   const [isLoggerOpen, setIsLoggerOpen] = useState(false);
@@ -135,6 +184,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setNotes(trackingService.getNotes(activeBaby.id) || []);
     setTodaySummary(trackingService.getTodaySummary(activeBaby.id));
     setReminders(reminderService.getReminders(activeBaby.id) || []);
+    setMilestones(growthService.getMilestones(activeBaby.id) || []);
+    setVaccinations(vaccinationService.getVaccinations(activeBaby.id) || []);
+    setVisits(visitService.getVisits(activeBaby.id) || []);
     setTodayCheckIn(wellbeingService.getTodayCheckIn());
     setBabies(babyService.getBabies() || []);
     setSyncPendingCount(storageService.getPendingSyncCount());
@@ -199,6 +251,62 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const logout = () => {
     authService.logout();
     setAuthState({ isAuthenticated: false, user: null, token: null });
+  };
+
+  // Admin and User Management actions
+  const createUser = (userData: Omit<User, 'id' | 'createdAt'>) => {
+    const newUser = authService.createUser(userData);
+    refreshUsers();
+    showToast(`User ${newUser.name} created!`);
+    return newUser;
+  };
+
+  const updateUser = (id: string, updates: Partial<User>) => {
+    const updated = authService.updateUser(id, updates);
+    if (updated) {
+      refreshUsers();
+      if (authState.user?.id === id) {
+        setAuthState(authService.getAuthState());
+      }
+      showToast(`User ${updated.name} updated!`);
+    }
+  };
+
+  const deleteUser = (id: string) => {
+    if (authState.user?.id === id) {
+      showToast('Cannot delete currently active account!', { type: 'error' });
+      return;
+    }
+    authService.deleteUser(id);
+    refreshUsers();
+    showToast('User account deleted');
+  };
+
+  const toggleUserStatus = (id: string) => {
+    const updated = authService.toggleUserStatus(id);
+    if (updated) {
+      refreshUsers();
+      showToast(`User ${updated.name} is now ${updated.status}!`);
+    }
+  };
+
+  const resetUserPassword = (id: string) => {
+    const res = authService.resetUserPassword(id);
+    showToast(res.message, { type: 'info' });
+    return res;
+  };
+
+  const switchActiveUser = (u: User) => {
+    authService.switchActiveUser(u);
+    setAuthState(authService.getAuthState());
+    refreshData();
+    showToast(`Logged in as ${u.name} (${u.role})`);
+  };
+
+  const completeSetupWizard = () => {
+    authService.completeSetupWizard();
+    setAuthState(authService.getAuthState());
+    refreshUsers();
   };
 
   // Baby
@@ -389,6 +497,80 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     showToast("Check-in saved! You're doing great, Mom ❤️");
   };
 
+  // Milestones CRUD
+  const addMilestone = (data: Omit<Milestone, 'id'>) => {
+    const item = growthService.addMilestone({ ...data, babyId: activeBaby.id });
+    setMilestones(growthService.getMilestones(activeBaby.id));
+    showToast('Milestone added successfully');
+    return item;
+  };
+
+  const updateMilestone = (id: string, updates: Partial<Milestone>) => {
+    const item = growthService.updateMilestone(id, updates);
+    setMilestones(growthService.getMilestones(activeBaby.id));
+    showToast('Milestone updated successfully');
+    return item;
+  };
+
+  const deleteMilestone = (id: string) => {
+    growthService.deleteMilestone(id);
+    setMilestones(growthService.getMilestones(activeBaby.id));
+    showToast('Milestone deleted successfully');
+  };
+
+  const toggleMilestone = (id: string) => {
+    growthService.toggleMilestone(id);
+    setMilestones(growthService.getMilestones(activeBaby.id));
+  };
+
+  // Vaccinations CRUD
+  const addVaccination = (data: Omit<Vaccination, 'id'>) => {
+    const item = vaccinationService.addVaccination({ ...data, babyId: activeBaby.id });
+    setVaccinations(vaccinationService.getVaccinations(activeBaby.id));
+    showToast('Vaccination added successfully');
+    return item;
+  };
+
+  const updateVaccination = (id: string, updates: Partial<Vaccination>) => {
+    const item = vaccinationService.updateVaccination(id, updates);
+    setVaccinations(vaccinationService.getVaccinations(activeBaby.id));
+    showToast('Vaccination updated successfully');
+    return item;
+  };
+
+  const updateVaccinationStatus = (id: string, status: VaccinationStatus, administeredDate?: string) => {
+    vaccinationService.updateVaccinationStatus(id, status, administeredDate);
+    setVaccinations(vaccinationService.getVaccinations(activeBaby.id));
+    showToast('Vaccination status updated');
+  };
+
+  const deleteVaccination = (id: string) => {
+    vaccinationService.deleteVaccination(id);
+    setVaccinations(vaccinationService.getVaccinations(activeBaby.id));
+    showToast('Vaccination deleted successfully');
+  };
+
+  // Visits CRUD
+  const addVisit = (data: Omit<HealthcareVisit, 'id'>) => {
+    const item = visitService.addVisit({ ...data, babyId: activeBaby.id });
+    setVisits(visitService.getVisits(activeBaby.id));
+    showToast('Visit added successfully');
+    return item;
+  };
+
+  const updateVisit = (id: string, updates: Partial<HealthcareVisit>) => {
+    const item = visitService.updateVisit(id, updates);
+    setVisits(visitService.getVisits(activeBaby.id));
+    showToast('Visit updated successfully');
+    return item;
+  };
+
+  const deleteVisit = (id: string) => {
+    visitService.deleteVisit(id);
+    setVisits(visitService.getVisits(activeBaby.id));
+    showToast('Visit deleted successfully');
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -400,9 +582,33 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         activities,
         notes,
         reminders,
+        milestones,
+        addMilestone,
+        updateMilestone,
+        deleteMilestone,
+        toggleMilestone,
+        vaccinations,
+        addVaccination,
+        updateVaccination,
+        updateVaccinationStatus,
+        deleteVaccination,
+        visits,
+        addVisit,
+        updateVisit,
+        deleteVisit,
         todayCheckIn,
         toast,
         syncPendingCount,
+        isAdmin,
+        users,
+        refreshUsers,
+        createUser,
+        updateUser,
+        deleteUser,
+        toggleUserStatus,
+        resetUserPassword,
+        switchActiveUser,
+        completeSetupWizard,
         isLoggerOpen,
         activeLoggerTab,
         openLogger,

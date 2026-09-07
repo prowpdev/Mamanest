@@ -57,26 +57,75 @@ class GrowthService {
     };
   }
 
-  // Milestones
-  getMilestones(): Milestone[] {
-    return storageService.get<Milestone[]>(MILESTONES_KEY, INITIAL_MILESTONES) || [];
+  // Milestones CRUD
+  getMilestones(babyId?: string): Milestone[] {
+    const all = storageService.get<Milestone[]>(MILESTONES_KEY, INITIAL_MILESTONES) || [];
+    if (!babyId) return all;
+    // Return milestones for this baby or general milestones
+    const babyMilestones = all.filter((m) => !m.babyId || m.babyId === babyId);
+    return babyMilestones.length > 0 ? babyMilestones : all;
+  }
+
+  addMilestone(data: Omit<Milestone, 'id'>): Milestone {
+    const all = storageService.get<Milestone[]>(MILESTONES_KEY, INITIAL_MILESTONES) || [];
+    const newMilestone: Milestone = {
+      ...data,
+      id: `ms_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      suggestedActivities: data.suggestedActivities || [],
+    };
+    all.push(newMilestone);
+    storageService.set(MILESTONES_KEY, all);
+    storageService.enqueueSync('milestone', 'CREATE', newMilestone);
+    return newMilestone;
+  }
+
+  updateMilestone(id: string, updates: Partial<Milestone>): Milestone | null {
+    const all = storageService.get<Milestone[]>(MILESTONES_KEY, INITIAL_MILESTONES) || [];
+    let updatedItem: Milestone | null = null;
+    const updated = all.map((m) => {
+      if (m.id === id) {
+        updatedItem = { ...m, ...updates };
+        return updatedItem;
+      }
+      return m;
+    });
+
+    if (updatedItem) {
+      storageService.set(MILESTONES_KEY, updated);
+      storageService.enqueueSync('milestone', 'UPDATE', updatedItem);
+    }
+    return updatedItem;
+  }
+
+  deleteMilestone(id: string): boolean {
+    const all = storageService.get<Milestone[]>(MILESTONES_KEY, INITIAL_MILESTONES) || [];
+    const filtered = all.filter((m) => m.id !== id);
+    storageService.set(MILESTONES_KEY, filtered);
+    storageService.enqueueSync('milestone', 'DELETE', { id });
+    return true;
   }
 
   toggleMilestone(id: string): Milestone[] {
-    const milestones = this.getMilestones();
+    const milestones = storageService.get<Milestone[]>(MILESTONES_KEY, INITIAL_MILESTONES) || [];
+    let updatedTarget: Milestone | null = null;
     const updated = milestones.map((m) => {
       if (m.id === id) {
         const nextCompleted = !m.completed;
-        return {
+        updatedTarget = {
           ...m,
           completed: nextCompleted,
+          status: nextCompleted ? 'completed' : undefined,
           completedDate: nextCompleted ? new Date().toISOString().split('T')[0] : undefined,
         };
+        return updatedTarget;
       }
       return m;
     });
 
     storageService.set(MILESTONES_KEY, updated);
+    if (updatedTarget) {
+      storageService.enqueueSync('milestone', 'UPDATE', updatedTarget);
+    }
     return updated;
   }
 }

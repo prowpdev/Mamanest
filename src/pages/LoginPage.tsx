@@ -18,11 +18,17 @@ export const LoginPage: React.FC = () => {
     setLoading(true);
 
     try {
-      const success = await login(email, password);
-      if (success) {
-        navigate('/');
+      const res = await login(email, password);
+      if (res.success && res.user) {
+        if (!res.user.setupWizardCompleted) {
+          navigate('/wizard');
+        } else if (res.user.role === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/');
+        }
       } else {
-        setError('Invalid credentials. Try our demo account.');
+        setError(res.error || 'Invalid credentials. Try our demo account.');
       }
     } catch (err) {
       setError('Login failed. Please try again.');
@@ -31,12 +37,28 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const handleQuickDemo = async () => {
+  const handleQuickDemoMother = async () => {
     setEmail('sarah.mom@example.com');
     setPassword('password123');
     setLoading(true);
-    await login('sarah.mom@example.com', 'password123');
-    navigate('/');
+    const res = await login('sarah.mom@example.com', 'password123');
+    if (res.success && res.user) {
+      if (!res.user.setupWizardCompleted) {
+        navigate('/wizard');
+      } else {
+        navigate('/');
+      }
+    }
+  };
+
+  const handleQuickDemoAdmin = async () => {
+    setEmail('admin@mamanest.com');
+    setPassword('admin123');
+    setLoading(true);
+    const res = await login('admin@mamanest.com', 'admin123');
+    if (res.success && res.user) {
+      navigate('/admin');
+    }
   };
 
   return (
@@ -109,15 +131,26 @@ export const LoginPage: React.FC = () => {
           </button>
         </form>
 
-        {/* Quick Demo Access Button */}
-        <button
-          type="button"
-          onClick={handleQuickDemo}
-          className="w-full py-3 bg-rose-50 hover:bg-rose-100/80 border border-rose-200 text-rose-800 text-xs font-bold rounded-2xl flex items-center justify-center gap-2 transition-all cursor-pointer"
-        >
-          <Sparkles className="w-4 h-4 text-rose-600" />
-          <span>Quick Demo Access (Sarah & Baby Emma)</span>
-        </button>
+        {/* Quick Demo Access Buttons */}
+        <div className="space-y-2 pt-1">
+          <button
+            type="button"
+            onClick={handleQuickDemoMother}
+            className="w-full py-2.5 bg-rose-50 hover:bg-rose-100/80 border border-rose-200 text-rose-800 text-xs font-bold rounded-2xl flex items-center justify-center gap-2 transition-all cursor-pointer"
+          >
+            <Sparkles className="w-4 h-4 text-rose-600" />
+            <span>Log in as Mother (Sarah & Emma)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleQuickDemoAdmin}
+            className="w-full py-2.5 bg-purple-50 hover:bg-purple-100/80 border border-purple-200 text-purple-800 text-xs font-bold rounded-2xl flex items-center justify-center gap-2 transition-all cursor-pointer"
+          >
+            <span className="text-sm">🛡️</span>
+            <span>Log in as Admin (admin@mamanest.com)</span>
+          </button>
+        </div>
       </div>
 
       <div className="text-center pb-safe space-y-2">

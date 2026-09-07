@@ -10,18 +10,24 @@ export const RegisterPage: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !email.trim() || !password.trim()) return;
 
+    setError('');
     setLoading(true);
     try {
-      await register(name, email, password);
-      navigate('/baby-setup');
+      const res = await register(name, email, password);
+      if (res.success) {
+        navigate('/wizard');
+      } else {
+        setError(res.error || 'Registration failed.');
+      }
     } catch (err) {
-      console.error(err);
+      setError('Registration encountered an issue. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -48,6 +54,12 @@ export const RegisterPage: React.FC = () => {
             Join thousands of new mothers nurturing their families and themselves.
           </p>
         </div>
+
+        {error && (
+          <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl text-center font-medium">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-3 bg-white p-5 rounded-3xl border border-stone-200/80 shadow-2xs">
           <div>

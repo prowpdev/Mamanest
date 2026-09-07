@@ -1,14 +1,21 @@
 // Core Domain Types & Interfaces for MamaNest
 
-export type UserRole = 'mom' | 'partner' | 'caregiver';
+export type UserRole = 'admin' | 'mom' | 'partner' | 'caregiver';
 
 export interface User {
   id: string;
   email: string;
   name: string;
+  role: UserRole;
   createdAt: string;
   avatarUrl?: string;
+  status?: 'active' | 'suspended';
+  setupWizardCompleted?: boolean;
   settings?: UserSettings;
+  phone?: string;
+  lastLoginAt?: string;
+  assignedBabyIds?: string[];
+  notes?: string;
 }
 
 export interface UserSettings {
@@ -149,39 +156,81 @@ export interface GrowthRecord {
 }
 
 // Developmental Milestones
+export type MilestoneCategory = 'motor' | 'social' | 'cognitive' | 'language' | 'sensory' | 'other';
+export type MilestoneStatus = 'due' | 'upcoming' | 'completed' | 'overdue';
+
 export interface Milestone {
   id: string;
-  ageRange: string; // e.g. "0-2 Months", "3-4 Months", "5-6 Months"
-  category: 'motor' | 'social' | 'cognitive' | 'language';
+  babyId?: string;
   title: string;
   description: string;
+  category: MilestoneCategory;
+  ageRange: string; // e.g. "0–2 Months", "3–4 Months", "5–6 Months"
+  minAgeMonths?: number;
+  maxAgeMonths?: number;
+  targetAge?: string; // target age or date representation
+  targetDate?: string; // YYYY-MM-DD
+  status?: MilestoneStatus;
   completed: boolean;
   completedDate?: string;
+  notes?: string;
   suggestedActivities: string[];
 }
 
-// Vaccinations & Appointments
+// Vaccinations & Healthcare Visits
+export type VaccinationStatus = 'scheduled' | 'due' | 'upcoming' | 'completed' | 'missed' | 'overdue';
+
 export interface Vaccination {
   id: string;
   babyId: string;
   name: string;
+  category?: string;
+  doseNumber?: string;
   recommendedAge: string;
+  recommendedAgeMonths?: number;
+  scheduledDate?: string;
   administeredDate?: string;
-  status: 'completed' | 'scheduled' | 'upcoming';
+  status: VaccinationStatus;
   clinic?: string;
+  providerName?: string;
   notes?: string;
 }
 
-export interface Appointment {
+export type VisitType =
+  | 'Pediatric Checkup'
+  | 'Vaccination'
+  | 'Growth Monitoring'
+  | 'Dental'
+  | 'Emergency'
+  | 'Sick Visit'
+  | 'Follow-up'
+  | 'Other';
+
+export interface HealthcareVisit {
   id: string;
   babyId: string;
-  title: string;
-  doctorName: string;
-  location?: string;
-  dateTime: string;
+  date: string; // YYYY-MM-DD
+  time?: string; // HH:mm
+  visitType: VisitType;
+  doctorName: string; // Healthcare provider
+  clinic: string; // Clinic / Hospital
+  reasonForVisit: string;
+  weightKg?: number;
+  heightCm?: number;
+  headCircumferenceCm?: number;
+  temperatureC?: number;
   notes?: string;
-  completed: boolean;
+  diagnosis?: string;
+  followUpDate?: string;
+  followUpNotes?: string;
+  completed?: boolean;
+  // Backward compatibility fields
+  title?: string;
+  location?: string;
+  dateTime?: string;
 }
+
+export type Appointment = HealthcareVisit;
 
 // Reminders
 export type ReminderType = 'vaccination' | 'doctor' | 'medicine' | 'feeding' | 'custom';

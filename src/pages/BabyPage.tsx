@@ -8,11 +8,14 @@ import { VaccinationsTab } from '../components/baby/VaccinationsTab';
 import { AppointmentsTab } from '../components/baby/AppointmentsTab';
 import { cameraService } from '../services/cameraService';
 import { formatDateFriendly } from '../utils/formatters';
+import { calculateBabyAge } from '../utils/ageCalculator';
 
 export const BabyPage: React.FC = () => {
   const { activeBaby, updateBaby, showToast, notes } = useApp();
 
   const [activeTab, setActiveTab] = useState<'growth' | 'milestones' | 'vaccines' | 'appointments' | 'moments'>('growth');
+
+  const babyAge = calculateBabyAge(activeBaby.birthDate);
 
   const handleUpdatePhoto = async () => {
     const photo = await cameraService.takeOrPickPhoto();
@@ -73,7 +76,7 @@ export const BabyPage: React.FC = () => {
               </div>
 
               <p className="text-xs font-semibold text-rose-600 mt-0.5">
-                3 Months, 2 Weeks old (14 weeks)
+                {babyAge.formattedAge} • {babyAge.weeks} weeks old
               </p>
 
               <p className="text-[11px] text-stone-400 mt-0.5">

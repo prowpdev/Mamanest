@@ -19,6 +19,8 @@ import { TrackPage } from './pages/TrackPage';
 import { LearnPage } from './pages/LearnPage';
 import { RemindersPage } from './pages/RemindersPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { SetupWizardPage } from './pages/SetupWizardPage';
+import { AdminPage } from './pages/AdminPage';
 
 const MainLayout: React.FC = () => {
   const location = useLocation();
@@ -30,6 +32,8 @@ const MainLayout: React.FC = () => {
     '/login',
     '/register',
     '/baby-setup',
+    '/wizard',
+    '/admin',
     '/reminders',
   ].includes(location.pathname);
 
@@ -67,6 +71,8 @@ export default function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/baby-setup" element={<BabySetupPage />} />
+            <Route path="/wizard" element={<SetupWizardPage />} />
+            <Route path="/admin" element={<AdminPage />} />
             {/* Fallback */}
             <Route path="*" element={<HomePage />} />
           </Route>

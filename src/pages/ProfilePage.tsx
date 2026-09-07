@@ -13,6 +13,7 @@ import {
   ChevronRight,
   Plus,
   RefreshCw,
+  Sparkles,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { PageHeader } from '../components/common/PageHeader';
@@ -80,18 +81,54 @@ export const ProfilePage: React.FC = () => {
             {user?.name ? user.name[0] : 'M'}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <h2 className="text-base font-bold text-stone-900 font-display truncate">
                 {user?.name || 'Sarah Jenkins'}
               </h2>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700">
-                Mom
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                  user?.role === 'admin'
+                    ? 'bg-purple-100 text-purple-700 border-purple-200'
+                    : user?.role === 'partner'
+                    ? 'bg-blue-100 text-blue-700 border-blue-200'
+                    : user?.role === 'caregiver'
+                    ? 'bg-teal-100 text-teal-700 border-teal-200'
+                    : 'bg-rose-50 text-rose-700 border-rose-100'
+                }`}
+              >
+                {user?.role ? user.role.toUpperCase() : 'MOM'}
               </span>
             </div>
             <p className="text-xs text-stone-500 truncate">{user?.email || 'sarah.mom@example.com'}</p>
             <p className="text-[11px] text-stone-400 mt-0.5">Nest member since June 2026</p>
           </div>
         </div>
+
+        {/* Admin Console Card (if user is admin or accessible) */}
+        {user?.role === 'admin' && (
+          <div className="p-4 bg-gradient-to-br from-purple-950 to-stone-900 text-white rounded-3xl shadow-sm space-y-2 border border-purple-800/40">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-purple-300 flex items-center gap-1.5 font-display">
+                <Shield className="w-4 h-4 text-purple-400" />
+                Administrator Privileges Active
+              </span>
+              <span className="text-[10px] bg-purple-800/60 px-2 py-0.5 rounded-full text-purple-200 font-semibold">
+                Super Admin
+              </span>
+            </div>
+            <p className="text-[11px] text-stone-300">
+              You have clinical and system permissions to view all users, activate/suspend accounts, reset credentials, and switch accounts.
+            </p>
+            <button
+              id="profile-admin-console-btn"
+              onClick={() => navigate('/admin')}
+              className="w-full mt-1 py-2.5 bg-purple-600 hover:bg-purple-700 active:scale-98 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+            >
+              <Shield className="w-3.5 h-3.5" />
+              <span>Open Admin Console (Manage Users)</span>
+            </button>
+          </div>
+        )}
 
         {/* Baby Management Card */}
         <div className="p-4 bg-white border border-stone-200/80 rounded-3xl shadow-xs space-y-3">
@@ -145,6 +182,42 @@ export const ProfilePage: React.FC = () => {
 
         {/* Quick Links Menu */}
         <div className="bg-white border border-stone-200/80 rounded-3xl overflow-hidden shadow-2xs divide-y divide-stone-100">
+          <button
+            id="profile-launch-wizard-btn"
+            onClick={() => navigate('/wizard')}
+            className="w-full p-3.5 flex items-center justify-between hover:bg-stone-50 transition-colors cursor-pointer text-left"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-rose-50 text-rose-600">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-stone-800 block">Setup Wizard Guide</span>
+                <span className="text-[11px] text-stone-400">Re-run baby profile & reminder preferences</span>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-stone-400" />
+          </button>
+
+          {user?.role === 'admin' && (
+            <button
+              id="profile-quick-admin-btn"
+              onClick={() => navigate('/admin')}
+              className="w-full p-3.5 flex items-center justify-between hover:bg-purple-50/50 transition-colors cursor-pointer text-left bg-purple-50/20"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-purple-100 text-purple-700">
+                  <Shield className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-purple-900 block">Admin Console (Manage Users)</span>
+                  <span className="text-[11px] text-purple-600">View user directory, roles & account status</span>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-purple-400" />
+            </button>
+          )}
+
           <button
             onClick={() => navigate('/reminders')}
             className="w-full p-3.5 flex items-center justify-between hover:bg-stone-50 transition-colors cursor-pointer text-left"
